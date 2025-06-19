@@ -56,6 +56,10 @@ def enemies_movement(direction: str, enemies):
     elif any(enemy.pos()[0] >= 350 for row in enemies for enemy in row) or any(enemy.pos()[0] <= -350 for row in enemies for enemy in row):
         enemies_direction['dir'] = 'down'
 
+    # If any enemy reaches the player ycor, it's a game over
+    if any(enemy.pos()[1] <= player.pos()[1] for row in enemies_list for enemy in row):
+        game_over_popup()
+
     [enemy.move(enemies_direction['dir']) for row in enemies for enemy in row]
     screen.ontimer(lambda:enemies_movement(enemies_direction['dir'], enemies), 200)
 
@@ -74,13 +78,21 @@ def destroy_enemy(row, enemy, projectile):
     enemies_list[enemies_list.index(row)].remove(enemy)
     print(score)
 
-def enemy_shot():
-    rand_row = enemies_list[randint(0, len(enemies_list)-1)]
-    enemy = rand_row[randint(0, len(rand_row)-1)]
+enemies_shot_cd = 3000
 
-    init_projectile(source='enemy', enemy=enemy)
+def enemy_shot(enemies):
+    rows = [row for row in enemies if len(row) > 0]
+    if rows:
+        rand_n = randint(0, len(rows)-1) if len(rows) > 1 else 0
+        rand_row = rows[rand_n]
+        rand_n = randint(0, len(rand_row)-1) if len(rand_row) > 1 else 0
+        enemy = rand_row[rand_n]
+        print(enemies)
 
-    screen.ontimer(enemy_shot, 5000)
+        init_projectile(source='enemy', enemy=enemy)
+
+        screen.ontimer(lambda: enemy_shot(enemies), enemies_shot_cd)
+
 # ======================================== UI & POPUPS ========================================
 
 ui_lives = []
@@ -125,6 +137,8 @@ def game_over_popup():
     if not play_again:
         screen.bye()
 
+    restart()
+
 # ======================================== PROJECTILE ========================================
 
 def init_projectile(source: str, enemy=None):
@@ -150,16 +164,19 @@ def check_out_of_bounds(projectile):
 def check_player_hit():
     for projectile in enemies_projectiles:
         if projectile.distance(player) < (20*size_modifier):
-            if player.death():
-                game_over_popup()
-                print('player hit')
             ui_lives[-1].lose_life()
             ui_lives.remove(ui_lives[-1])
             enemies_projectiles.remove(projectile)
             projectile.destroy()
+            if player.death():
+                game_over_popup()
+                print('player hit')
 
 def check_enemy_hit(projectile):
     [destroy_enemy(row, enemy, projectile) for row in enemies_list for enemy in row if projectile.distance(enemy) < (20*.8*size_modifier)]
+
+    if all(len(row) == 0 for row in enemies_list):
+        restart(game_level+1)
 
 def check_projectiles_pos():
     for projectile in projectiles:
@@ -169,8 +186,70 @@ def check_projectiles_pos():
         check_out_of_bounds(projectile)
         check_player_hit()
 
+# ======================================== GAME RESET/RESTART ========================================
+
+def restart(level=1):
+    global score
+    global player
+    global enemies_list
+    global game_level
+    global enemies_direction
+    global enemies_shot_cd
+    global ui_lives
+
+    game_level = level
+
+    # - PLAYER RESET
+    player.hideturtle()
+    player.clear()
+    player = Player()
+
+    player.lives = 2
+
+    screen.onkeypress(key="Right", fun=player.go_right)
+    screen.onkeypress(key="d", fun=player.go_right)
+    screen.onkeypress(key="Left", fun=player.go_left)
+    screen.onkeypress(key="a", fun=player.go_left)
+
+    # Shoots the player projectiles
+    screen.onkeypress(key="space", fun=lambda: init_projectile('player'))
+
+    # - ENEMIES RESET
+    [enemy.destroy() for row in enemies_list for enemy in row]
+    enemies_list.clear()
+
+    enemies_list = init_enemies(game_level // 3 + 1)
+
+    enemies_direction = {'dir': 'right'}
+
+    # - PROJECTILES RESET
+    [projectile.destroy() for projectile in enemies_projectiles]
+    enemies_projectiles.clear()
+
+    try:
+        projectiles[0].destroy()
+        projectiles.clear()
+    except Exception as e:
+        print('Error: ', e)
+
+
+    # - UI RESET
+    updated_score = 0
+
+    if level > 1:
+        enemies_shot_cd = int(enemies_shot_cd * .8)
+        updated_score = score.score
+    score = Score(SCREEN_WIDTH, SCREEN_HEIGHT, high_score, score=updated_score)
+
+    ui_lives = []
+
+    init_lives()
+
+    enemy_shot(enemies_list)
+    enemies_movement(enemies_direction['dir'], enemies_list)
 
 # ======================================== PLAYER INPUTS ========================================
+
 screen.onkeypress(key="Right", fun=player.go_right)
 screen.onkeypress(key="d", fun=player.go_right)
 screen.onkeypress(key="Left", fun=player.go_left)
@@ -179,6 +258,15 @@ screen.onkeypress(key="a", fun=player.go_left)
 # Shoots the player projectiles
 screen.onkeypress(key="space", fun=lambda: init_projectile('player'))
 
+def destroy_enemies():
+    for row in enemies_list:
+        for enemy in row:
+            if enemy != enemies_list[0][0]:
+                enemy.destroy()
+                enemies_list[enemies_list.index(row)].remove(enemy)
+
+screen.onkeypress(key='l', fun=destroy_enemies)
+
 # ======================================== MAIN ========================================
 
 def main():
@@ -186,7 +274,7 @@ def main():
 
     start_game_popup()
 
-    enemy_shot()
+    enemy_shot(enemies_list)
     enemies_movement(enemies_direction['dir'], enemies_list)
 
     while is_running:

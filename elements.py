@@ -60,21 +60,12 @@ class Player(Turtle):
         if self.pos()[0] > -350:
             self.move(self.SPEED*-1)
 
-    def death_animation(self):
-        for n in range(1000):
-            if n % 2 == 0:
-                self.color('red')
-            else:
-                self.color('white')
-
     def death(self):
         if self.lives >= 1:
             self.lives -= 1
-            self.death_animation()
             self.goto(self._INITIAL_POS)
             return False
         else:
-            self.death_animation()
             return True
 
 # ==================================== PROJECTILE | ENEMY & PLAYER ====================================
