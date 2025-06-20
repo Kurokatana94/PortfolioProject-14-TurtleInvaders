@@ -2,19 +2,42 @@ from turtle import Screen
 from tkinter import Tk, messagebox
 from elements import Player, Projectile, Enemy, Score, PlayerLife, size_modifier
 from random import randint
+import os
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 
+# ======================================== GAME STATS ========================================
+
+def get_save_file_path():
+    appdata = os.getenv('APPDATA')  # e.g., C:\Users\You\AppData\Roaming
+    return os.path.join(appdata, "TurtleInvaders", "turtle_invaders_save.txt")
+
+save_file_dir = get_save_file_path()
+
 def get_high_score():
-    return None
+    os.makedirs(os.path.dirname(save_file_dir), exist_ok=True)
+    try:
+        with open(save_file_dir, 'r') as file:
+            return int(file.read())
+    except FileNotFoundError:
+        with open(save_file_dir, 'w') as file:
+            file.write('0')
+            return '0'
 
 high_score = get_high_score()
 
 game_level = 1
 score = Score(SCREEN_WIDTH, SCREEN_HEIGHT, high_score)
 
-#Window init
+def update_high_score():
+    global high_score
+    if score.score > high_score:
+        high_score = f'{score.score}'
+        with open(save_file_dir, 'w') as file:
+            file.write(high_score)
+
+# ======================================== WINDOW ========================================
 screen = Screen()
 screen.bgcolor("black")
 screen.title("Turtle Invaders")
@@ -76,7 +99,6 @@ def destroy_enemy(row, enemy, projectile):
     projectiles.remove(projectile)
     enemy.destroy()
     enemies_list[enemies_list.index(row)].remove(enemy)
-    print(score)
 
 enemies_shot_cd = 3000
 
@@ -87,7 +109,6 @@ def enemy_shot(enemies):
         rand_row = rows[rand_n]
         rand_n = randint(0, len(rand_row)-1) if len(rand_row) > 1 else 0
         enemy = rand_row[rand_n]
-        print(enemies)
 
         init_projectile(source='enemy', enemy=enemy)
 
@@ -127,9 +148,11 @@ def game_over_popup():
     root.withdraw()
     root.attributes("-topmost", True)
 
+    update_high_score()
+
     play_again = messagebox.askyesno(
         title="Game Over",
-        message=f"Score: {score}\n\nDo you want to play again?"
+        message=f"Score: {score.score}\n\nDo you want to play again?"
     )
 
     root.destroy()
@@ -239,6 +262,10 @@ def restart(level=1):
     if level > 1:
         enemies_shot_cd = int(enemies_shot_cd * .8)
         updated_score = score.score
+
+    score.hideturtle()
+    score.clear()
+
     score = Score(SCREEN_WIDTH, SCREEN_HEIGHT, high_score, score=updated_score)
 
     ui_lives = []
@@ -258,14 +285,16 @@ screen.onkeypress(key="a", fun=player.go_left)
 # Shoots the player projectiles
 screen.onkeypress(key="space", fun=lambda: init_projectile('player'))
 
-def destroy_enemies():
-    for row in enemies_list:
-        for enemy in row:
-            if enemy != enemies_list[0][0]:
-                enemy.destroy()
-                enemies_list[enemies_list.index(row)].remove(enemy)
+# Here just for testing purposes
 
-screen.onkeypress(key='l', fun=destroy_enemies)
+# def destroy_enemies():
+#     for row in enemies_list:
+#         for enemy in row:
+#             if enemy != enemies_list[0][0]:
+#                 enemy.destroy()
+#                 enemies_list[enemies_list.index(row)].remove(enemy)
+
+# screen.onkeypress(key='l', fun=destroy_enemies)
 
 # ======================================== MAIN ========================================
 
