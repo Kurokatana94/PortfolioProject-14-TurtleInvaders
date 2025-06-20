@@ -27,5 +27,8 @@ A rework of the classic retro game "**_Space Invaders_**" built with Python's Tu
 - **→ / D** – Move right  
 - **Spacebar** – Fire
 
+### Release:
+- [v1.0](https://github.com/Kurokatana94/PortfolioProject-14-TurtleInvaders/releases/download/1.0.0/Turtle.Invaders.exe)
+
 ### Thanks for Checking It Out!
 Feel free to **download**, **modify**, and **use** this project however you'd like. Feedback or suggestions are always welcome!
